@@ -30,6 +30,28 @@ module Rails4Autocomplete
         items
       end
 
+      def get_fulltext_autocomplete_items(parameters)
+        model   = parameters[:model]
+        term    = parameters[:term]
+        methods  = parameters[:methods]
+        options = parameters[:options]
+        scopes  = Array(options[:scopes])
+        where   = options[:where]
+        limit   = get_autocomplete_limit(options)
+        order   = get_autocomplete_order(methods.first, options, model)
+
+        items = model.all
+
+        scopes.each { |scope| items = items.send(scope) } unless scopes.empty?
+
+        items = items.select(get_autocomplete_select_clause(model, methods.first, options)) unless options[:full_model]
+        items = items.where(get_fulltext_autocomplete_where_clause(model, term, methods, options)).
+            limit(limit).order(order)
+        items = items.where(where) unless where.blank?
+
+        items
+      end
+
       def get_autocomplete_select_clause(model, method, options)
         table_name = model.table_name
         (["#{table_name}.#{model.primary_key}", "#{table_name}.#{method}"] + (options[:extra_data].blank? ? [] : options[:extra_data]))
@@ -41,6 +63,20 @@ module Rails4Autocomplete
         like_clause = (postgres?(model) ? 'ILIKE' : 'LIKE')
         ["LOWER(#{table_name}.#{method}) #{like_clause} ?", "#{(is_full_search ? '%' : '')}#{term.downcase}%"]
       end
+
+      def get_fulltext_autocomplete_where_clause(model, term, methods, options)
+        table_name = model.table_name
+        is_full_search = options[:full]
+        like_clause = (postgres?(model) ? 'ILIKE' : 'LIKE')
+        query = []
+        values = []
+        methods.each do |method|
+          query << "LOWER(#{table_name}.#{method}) #{like_clause} ?"
+          values << "#{(is_full_search ? '%' : '')}#{term.downcase}%"
+        end
+        [query.join(' OR '), values].flatten
+      end
+
 
       def postgres?(model)
         # Figure out if this particular model uses the PostgreSQL adapter
