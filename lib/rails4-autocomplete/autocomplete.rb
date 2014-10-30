@@ -59,23 +59,23 @@ module Rails4Autocomplete
 
           render :json => json_for_autocomplete(items, options[:display_value] ||= method, options[:value_method] ||= method, options[:extra_data])
         end
-        
-        def fulltext_autocomplete(object, methods, options = {})
-          define_method("autocomplete_#{object}") do
-            method = options[:column_name] if options.has_key?(:column_name)
-            term = params[:term]
+      end  
 
-            if term && !term.blank?
-              #allow specifying fully qualified class name for model object
-              class_name = options[:class_name] || object
-              items = get_fulltext_autocomplete_items(:model => get_object(class_name), \
-                :options => options, :term => term, :methods => methods)
-            else
-              items = {}
-            end
+      def fulltext_autocomplete(object, methods, options = {})
+        define_method("autocomplete_#{object}") do
+        method = options[:column_name] if options.has_key?(:column_name)
+        term = params[:term]
 
-            render :json => json_for_autocomplete(items, options[:display_value] ||= methods.first, options[:value_method] ||= methods.first, options[:extra_data])
-          end
+        if term && !term.blank?
+          #allow specifying fully qualified class name for model object
+          class_name = options[:class_name] || object
+          items = get_fulltext_autocomplete_items(:model => get_object(class_name), \
+            :options => options, :term => term, :methods => methods)
+        else
+          items = {}
+        end
+
+        render :json => json_for_autocomplete(items, options[:display_value] ||= methods.first, options[:value_method] ||= methods.first, options[:extra_data])
         end   
       end
     end
